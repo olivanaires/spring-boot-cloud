@@ -48,7 +48,7 @@ public class CatalogService {
   }
 
   private String getGraphQlUrl(InstanceInfo instanceInfo) {
-    return "http://localhost:8081/graphql";
+    return instanceInfo.getHomePageUrl() + "/graphql";
   }
 
   public void updateCatalog(InstanceInfo instInfo) {
