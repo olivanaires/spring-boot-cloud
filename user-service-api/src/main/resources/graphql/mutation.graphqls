@@ -1,0 +1,7 @@
+type Mutation {
+    create(user: user!): UserEntity!
+}
+
+input user {
+    name: String!
+}
