@@ -42,10 +42,8 @@ public class CatalogService {
       Object body = objectResponseEntity.getBody();
       ObjectMapper mapper = new ObjectMapper();
       System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(body));
-    } catch (RuntimeException ex) {
+    } catch (RuntimeException | JsonProcessingException ex) {
       ex.printStackTrace();
-    } catch (JsonProcessingException e) {
-      e.printStackTrace();
     }
   }
 
