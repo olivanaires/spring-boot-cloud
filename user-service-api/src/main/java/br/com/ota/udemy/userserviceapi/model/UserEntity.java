@@ -1,9 +1,6 @@
 package br.com.ota.udemy.userserviceapi.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -12,10 +9,11 @@ import javax.persistence.Id;
 import java.io.Serializable;
 
 @Entity
-@Getter
-@Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@With
 public class UserEntity implements Serializable {
 
     private static final long serialVersionUID = -7507106767244758793L;
@@ -25,6 +23,6 @@ public class UserEntity implements Serializable {
     private Long id;
     private String name;
     private String email;
-    private String password;
+    private String cpf;
 
 }

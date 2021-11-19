@@ -1,8 +1,9 @@
-type Mutation {
-    create(data: CreateUser!): UserEntity!
+input CreateUser {
+    name: String
+    email: String
+    cpf: String
 }
 
-input CreateUser {
-    name: String!
-    email: String
+type Mutation {
+    create(data: CreateUser): UserEntity
 }

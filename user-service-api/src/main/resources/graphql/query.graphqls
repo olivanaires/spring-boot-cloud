@@ -1,3 +1,23 @@
-type Query {
-    users: [UserEntity]!
+#Type containing de informations of user
+type UserEntity {
+    #ID of user in DB
+    id: ID
+    #ID full name of user
+    name: String
+    #CPF of user
+    cpf: String
+    #Email for contacting user
+    email: String
 }
+
+type Query {
+    #Returns list of users
+    users: [UserEntity]
+
+    #Returns user info by cpf
+    user(
+        #CPF used to lookup a person
+        cpf: String
+    ): UserEntity #return UserEntity
+}
+
