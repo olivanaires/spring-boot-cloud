@@ -1,27 +1,20 @@
 package br.com.ota.udemy.discoveryservice.service;
 
-import br.com.ota.udemy.discoveryservice.model.catalog.QueryReturn;
-import br.com.ota.udemy.discoveryservice.model.catalog.Query;
-import br.com.ota.udemy.discoveryservice.model.catalog.QueryField;
-import br.com.ota.udemy.discoveryservice.model.catalog.Product;
+import br.com.ota.udemy.discoveryservice.model.catalog.*;
 import br.com.ota.udemy.discoveryservice.model.graphql.GraphQLArg;
 import br.com.ota.udemy.discoveryservice.model.graphql.GraphQLMetadataDataWrapper;
 import br.com.ota.udemy.discoveryservice.model.graphql.GraphQLTypeField;
 import br.com.ota.udemy.discoveryservice.model.graphql.GraphQLTypeMetadata;
+import br.com.ota.udemy.discoveryservice.repository.ProductRepository;
 import com.netflix.appinfo.InstanceInfo;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.time.Clock;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class CatalogService {
@@ -58,23 +51,22 @@ public class CatalogService {
               "  }" +
               "}" +
               "\",\"variables\":null}";
-  @Autowired private RestTemplate restTemplate;
 
-  @Autowired private Clock clock;
+  private final RestTemplate restTemplate;
+  private final ProductRepository productRepository;
 
-  @Value("${relatorio.catalog.refresh-interval:1m}")
-  private Duration refreshInterval;
+  @Autowired
+  public CatalogService(RestTemplate restTemplate, ProductRepository productRepository) {
+    this.restTemplate = restTemplate;
+    this.productRepository = productRepository;
+  }
 
   private void fetchServiceCatalog(InstanceInfo instanceInfo) {
-
     String graphQlUrl = getGraphQlUrl(instanceInfo);
     try {
       HttpHeaders headers = new HttpHeaders();
       headers.add("content-type", "application/json"); // maintain graphql
 
-      Product product = new Product();
-      product.setName(instanceInfo.getAppName());
-      product.setQueries(new ArrayList<>());
       ResponseEntity<GraphQLMetadataDataWrapper> objectResponseEntity = restTemplate.postForEntity(
               graphQlUrl,
               new HttpEntity<>(CATALOG_REQUEST_BODY, headers),
@@ -84,54 +76,62 @@ public class CatalogService {
       List<GraphQLTypeMetadata> types = body.getData().getSchema().getTypes();
       Optional<GraphQLTypeMetadata> queryType = types.stream().filter(t -> t.getName().equals("Query")).findFirst();
       if (queryType.isPresent()) {
-        mountProduct(product, types, queryType);
+        Product product = mountProduct(instanceInfo, types, queryType.get());
+        productRepository.save(product);
       }
-      System.out.println(product);
     } catch (RuntimeException ex) {
       ex.printStackTrace();
     }
   }
 
-  private void mountProduct(Product product, List<GraphQLTypeMetadata> types, Optional<GraphQLTypeMetadata> queryType) {
-    List<GraphQLTypeField> queries = queryType.get().getFields();
+  private Product mountProduct(InstanceInfo instanceInfo, List<GraphQLTypeMetadata> types, GraphQLTypeMetadata queryType) {
+    Product product = new Product();
+    product.setName(instanceInfo.getAppName());
+
+    Set<Query> productQueries = new HashSet<>();
+    List<GraphQLTypeField> queries = queryType.getFields();
     queries.forEach(q -> {
-      Query query = new Query();
-      query.setName(q.getName());
-      query.setDescription(q.getDescription());
+      Query query = Query.builder()
+              .product(product)
+              .name(q.getName())
+              .description(q.getDescription()).build();
+
       List<GraphQLArg> args = q.getArgs();
       if (!args.isEmpty()) {
-        query.setParams(new ArrayList<>());
+        query.setParams(new HashSet<>());
         args.forEach(a -> {
-          QueryField arg = new QueryField();
-          arg.setName(a.getName());
-          arg.setType(a.getType().getName());
-          arg.setDescription(a.getDescription());
-          query.getParams().add(arg);
+          QueryArgField arqField = QueryArgField.builder()
+                  .query(query)
+                  .name(a.getName())
+                  .type(a.getType().getName())
+                  .description(a.getDescription()).build();
+          query.getParams().add(arqField);
         });
       }
 
-      QueryReturn returnType = new QueryReturn();
       String type = q.getType().getKind();
-      returnType.setType(type);
-
       String typeName = type.equals("LIST") ? q.getType().getOfType().getName() : q.getType().getName();
-      returnType.setName(typeName);
+      QueryReturn queryReturn = QueryReturn.builder()
+              .type(type)
+              .name(typeName).build();
 
-      Optional<GraphQLTypeMetadata> queryReturn = types.stream().filter(t -> t.getName().equals(typeName)).findFirst();
-      if (queryReturn.isPresent() && !queryReturn.get().getFields().isEmpty()) {
-        returnType.setFields(new ArrayList<>());
-        queryReturn.get().getFields().forEach(f -> {
-          QueryField arg = new QueryField();
-          arg.setName(f.getName());
-          arg.setType(f.getType().getName());
-          arg.setDescription(f.getDescription());
-          returnType.getFields().add(arg);
+      Optional<GraphQLTypeMetadata> returnType = types.stream().filter(t -> t.getName().equals(typeName)).findFirst();
+      if (returnType.isPresent() && !returnType.get().getFields().isEmpty()) {
+        queryReturn.setFields(new HashSet<>());
+        returnType.get().getFields().forEach(f -> {
+          QueryReturnField returnField = QueryReturnField.builder()
+                  .queryReturn(queryReturn)
+                  .name(f.getName())
+                  .type(f.getType().getName())
+                  .description(f.getDescription()).build();
+          queryReturn.getFields().add(returnField);
         });
       }
-
-      query.setReturnType(returnType);
-      product.getQueries().add(query);
+      query.setQueryReturn(queryReturn);
+      productQueries.add(query);
     });
+    product.setQueries(productQueries);
+    return product;
   }
 
   private String getGraphQlUrl(InstanceInfo instanceInfo) {

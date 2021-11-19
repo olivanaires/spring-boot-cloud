@@ -1,14 +1,28 @@
 package br.com.ota.udemy.discoveryservice.model.catalog;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
-import java.util.List;
+import javax.persistence.*;
+import java.io.Serializable;
+import java.util.Set;
 
+@Entity
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 @Getter
 @Setter
-public class QueryReturn {
+public class QueryReturn implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    private Long id;
     private String type;
     private String name;
-    private List<QueryField> fields;
+
+    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER, mappedBy = "queryReturn")
+    private Set<QueryReturnField> fields;
+
 }

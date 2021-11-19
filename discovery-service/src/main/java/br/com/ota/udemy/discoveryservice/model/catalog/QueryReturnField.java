@@ -1,10 +1,10 @@
 package br.com.ota.udemy.discoveryservice.model.catalog;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
 import javax.persistence.*;
 import java.io.Serializable;
-import java.util.Set;
 
 @Entity
 @AllArgsConstructor
@@ -12,16 +12,20 @@ import java.util.Set;
 @Builder
 @Getter
 @Setter
-public class Product implements Serializable {
+public class QueryReturnField implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
+    private String type;
     private String name;
+    private String description;
 
-    @OneToMany(mappedBy = "product", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
-    private Set<Query> queries;
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "query_return_id")
+    private QueryReturn queryReturn;
 
 }

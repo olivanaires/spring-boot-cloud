@@ -154,6 +154,24 @@
 				}
 			},
 			"response": []
+		},
+		{
+			"name": "catalog/list",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:8010/products",
+					"host": [
+						"localhost"
+					],
+					"port": "8010",
+					"path": [
+						"products"
+					]
+				}
+			},
+			"response": []
 		}
 	]
 }
